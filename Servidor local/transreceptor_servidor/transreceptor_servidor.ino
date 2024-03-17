@@ -7,7 +7,7 @@
 RF24 radio(9, 8);  // CE, CSN
 
 const int INTERVALO_ENTRE_TRABAJO = 2500;
-const int TAMANIO_MAXIMO_BUFFER = 64;
+const int TAMANIO_MAXIMO_BUFFER = 32;
 const int LARGO_NOMBRE_DISPOSITIVO = 24;
 
 const byte CANAL_ESCRITURA[6] = "00001";
@@ -30,17 +30,20 @@ void setup()
 
 void loop()
 {
-  delay(250);
+  delay(5);
   establecerReceptor();
-  while (radio.available())
+  if(radio.available())
   {
-    radio.read(&mensaje, TAMANIO_MAXIMO_BUFFER);
-    Serial.println(mensaje);
+      radio.read(&mensaje, radio.getPayloadSize());
+      Serial.println(mensaje);
   }
-  delay(250);
-  while (Serial.available () > 0)
+  delay(5);
+  if(Serial.available())
   {
-    process_data(Serial.readString());
+    while (Serial.available () > 0)
+    {
+      process_data(Serial.readString());
+    }
   }
 }
 
@@ -48,14 +51,10 @@ void loop()
 void process_data (String data)
 {
   establecerTransmisor();
-  bool resultado = radio.write(data.c_str(), TAMANIO_MAXIMO_BUFFER);
-  sprintf(mensajeString, "%s", resultado ? "true" : "false");
-  Serial.println(mensajeString);
+  radio.write(data.c_str(), TAMANIO_MAXIMO_BUFFER);
 } 
 void inicializar()
 {
-
-  //radio.begin();
   while (!Serial); 
   {
     Serial.begin(9600);
@@ -72,8 +71,9 @@ void inicializar()
     }
   }
   radio.setDataRate(RF24_2MBPS); // Set the speed of the transmission to the quickest available
-  radio.setChannel(124); // Use a channel unlikely to be used by Wifi, Microwave ovens etc
+  radio.setChannel(125); // Use a channel unlikely to be used by Wifi, Microwave ovens etc
   radio.setPALevel(RF24_PA_MAX);
+  radio.setPayloadSize(TAMANIO_MAXIMO_BUFFER);
   radio.openWritingPipe(CANAL_ESCRITURA); // 00001
   radio.openReadingPipe(1, CANAL_LECTURA); // 00002
   Serial.println("DEBUG:inicializado");
